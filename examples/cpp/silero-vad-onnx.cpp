@@ -38,7 +38,7 @@ public:
         // Call reset before each audio start
         std::memset(_h.data(), 0.0f, _h.size() * sizeof(float));
         std::memset(_c.data(), 0.0f, _c.size() * sizeof(float));
-        triggerd = false;
+        triggered = false;
         temp_end = 0;
         current_sample = 0;
     }
@@ -99,45 +99,45 @@ public:
             temp_end = 0;
         }
         // 1) Silence
-        if ((output < threshold) && (triggerd == false))
+        if ((output < threshold) && (triggered == false))
         {
             // printf("{ silence: %.3f s }\n", 1.0 * current_sample / sample_rate);
         }
         // 2) Speaking 
-        if ((output >= (threshold - 0.15)) && (triggerd == true))
+        if ((output >= (threshold - 0.15)) && (triggered == true))
         {
             // printf("{ speaking_2: %.3f s }\n", 1.0 * current_sample / sample_rate);
         }
 
         // 3) Start
-        if ((output >= threshold) && (triggerd == false))
+        if ((output >= threshold) && (triggered == false))
         {
-            triggerd = true;
+            triggered = true;
             speech_start = current_sample - window_size_samples - speech_pad_samples; // minus window_size_samples to get precise start time point.
             printf("{ start: %.3f s }\n", 1.0 * speech_start / sample_rate);
         }
 
         // 4) End 
-        if ((output < (threshold - 0.15)) && (triggerd == true))
+        if ((output < (threshold - 0.15)) && (triggered == true))
         {
 
             if (temp_end == 0)
             {
                 temp_end = current_sample;
             }
-            // a. silence < min_slience_samples, continue speaking 
+            // a. silence < min_silence_samples, continue speaking
             if ((current_sample - temp_end) < min_silence_samples)
             {
                 // printf("{ speaking_4: %.3f s }\n", 1.0 * current_sample / sample_rate);
                 // printf("");
             }
-            // b. silence >= min_slience_samples, end speaking
+            // b. silence >= min_silence_samples, end speaking
             else
             {
                 speech_end = temp_end ? temp_end + speech_pad_samples : current_sample + speech_pad_samples;
                 temp_end = 0;
-                triggerd = false;
-                printf("{ end: %.3f s }\n", 1.0 * speech_end / sample_rate);
+                triggered = false;
+                //printf("{ end: %.3f s }\n", 1.0 * speech_end / sample_rate);
             }
         }
 
@@ -146,20 +146,20 @@ public:
 
 private:
     // model config
-    int64_t window_size_samples;  // Assign when init, support 256 512 768 for 8k; 512 1024 1536 for 16k.
+    int64_t window_size_samples;  // Assign at init, supports 256 512 768 for 8k; 512 1024 1536 for 16k.
     int sample_rate;
-    int sr_per_ms;  // Assign when init, support 8 or 16
+    int sr_per_ms;  // Assign at init, supports 8 or 16
     float threshold;
     int min_silence_samples; // sr_per_ms * #ms
-    int speech_pad_samples; // usually a 
+    int speech_pad_samples; // usually a [WHAT? left blank upstream...]
 
     // model states
-    bool triggerd = false;
+    bool triggered = false;
     unsigned int speech_start = 0; 
     unsigned int speech_end = 0;
     unsigned int temp_end = 0;
     unsigned int current_sample = 0;    
-    // MAX 4294967295 samples / 8sample per ms / 1000 / 60 = 8947 minutes  
+    // MAX 4294967295 samples / 8 samples per ms / 1000 / 60 = 8947 minutes
     float output;
 
     // Onnx model
@@ -228,21 +228,21 @@ int main()
 
     // ===== Test configs =====
     std::string path = "../files/silero_vad.onnx";
-    int test_sr = 8000;
-    int test_frame_ms = 64;
-    float test_threshold = 0.5f;
-    int test_min_silence_duration_ms = 0;
-    int test_speech_pad_ms = 0;
-    int test_window_samples = test_frame_ms * (test_sr/1000);
+    int sample_rate = 16000;
+    int frame_size = 64;
+    float threshold = 0.5f;
+    int min_silence_duration_ms = 100;
+    int speech_pad_ms = 0;
+    int window_samples = frame_size * (sample_rate / 1000);
 
     VadIterator vad(
-        path, test_sr, test_frame_ms, test_threshold,
-        test_min_silence_duration_ms, test_speech_pad_ms);
+            path, sample_rate, frame_size, threshold,
+            min_silence_duration_ms, speech_pad_ms);
 
-    for (int j = 0; j < wav_reader.num_samples(); j += test_window_samples)
+    for (int j = 0; j < wav_reader.num_samples(); j += window_samples)
     {
         // std::cout << "== 4" << std::endl;
-        std::vector<float> r{&input_wav[0] + j, &input_wav[0] + j + test_window_samples};
+        std::vector<float> r{&input_wav[0] + j, &input_wav[0] + j + window_samples};
         auto start = std::chrono::high_resolution_clock::now();
         // Predict and print throughout process time
         vad.predict(r);

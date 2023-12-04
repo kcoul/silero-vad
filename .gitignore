@@ -1,0 +1,5 @@
+.DS_Store
+.idea
+onnxruntime-*
+cmake-build-*
+examples/cpp/files/silero_vad.onnx
