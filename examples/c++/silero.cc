@@ -5,6 +5,7 @@
 // Version     : 1.3
 
 #include "silero.h"
+#include <stdexcept>
 
 
 namespace silero {
@@ -118,6 +119,9 @@ namespace silero {
                 session_options.SetInterOpNumThreads(inter_threads);
                 session_options.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_ALL);
                 session = std::make_shared<Ort::Session>(env, model_path.c_str(), session_options);
+                if (!session) {
+                        throw std::runtime_error("Failed to create ONNX Runtime session for Silero VAD.");
+                }
 		std::cout<<"Silero onnx-Model loaded successfully"<<std::endl;
         }
 
