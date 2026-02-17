@@ -118,7 +118,12 @@ namespace silero {
                 session_options.SetIntraOpNumThreads(intra_threads);
                 session_options.SetInterOpNumThreads(inter_threads);
                 session_options.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_ALL);
+#ifdef _WIN32
+                std::wstring model_path_w(model_path.begin(), model_path.end());
+                session = std::make_shared<Ort::Session>(env, model_path_w.c_str(), session_options);
+#else
                 session = std::make_shared<Ort::Session>(env, model_path.c_str(), session_options);
+#endif
                 if (!session) {
                         throw std::runtime_error("Failed to create ONNX Runtime session for Silero VAD.");
                 }
